@@ -22,6 +22,8 @@ class TimoConfig:
             self.headers[kv[0]] = kv[1].strip()
 
         self.local_library = self.config.get("local", "library")
+        self.uid = self.config.getint("local", "uid")
+        self.gid = self.config.getint("local", "gid")
 
         self._logger = logging.getLogger("TimoRecordDownload")
         self._logger.setLevel(logging.DEBUG)

@@ -55,6 +55,7 @@ class TimoRecordDownload:
         if not os.path.exists(self.cfg.local_library):
             os.makedirs(self.cfg.local_library)
             self.logger.info("create folders %s", self.cfg.local_library)
+            os.chown(self.cfg.local_library, self.cfg.uid, self.cfg.gid)
 
         save_dir = os.path.join(self.cfg.local_library, recordItem.time_str)
         if os.path.exists(save_dir):
@@ -62,6 +63,7 @@ class TimoRecordDownload:
             return
         self.logger.info("create folders %s", save_dir)
         os.makedirs(save_dir)
+        os.chown(save_dir, self.cfg.uid, self.cfg.gid)
 
         for item in flv_items:
             local_flv_path = os.path.join(save_dir, str(item.idx) + ".flv")
@@ -73,4 +75,6 @@ class TimoRecordDownload:
                 while chunk:
                     fto.write(chunk)
                     chunk = ffrom.read(16*1024)
+            os.chown(local_flv_path, self.cfg.uid, self.cfg.gid)
+        
         self.logger.info("DONE!")
