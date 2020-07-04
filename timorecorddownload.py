@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import os.path
 import shutil
@@ -12,21 +11,8 @@ from timoconfig import TimoConfig
 
 class TimoRecordDownload:
     def __init__(self):
-        self.cfg = TimoConfig("/etc/timo/timo.conf")
-
-        self.logger = logging.getLogger("TimoRecordDownload")
-        self.logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-
-        handler = logging.FileHandler("/var/log/timo.log")
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        self.cfg = TimoConfig()
+        self.logger = self.cfg.logger
 
     def get_request_from_url(self, url: str) -> urllib.request.Request:
         req = urllib.request.Request(url)
