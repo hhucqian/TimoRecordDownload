@@ -1,6 +1,4 @@
 from timorecorddownload import TimoRecordDownload
-import logging
-import sys
 
 def main():
     trd = TimoRecordDownload()

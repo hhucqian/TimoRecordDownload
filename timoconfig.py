@@ -7,7 +7,7 @@ class TimoConfig:
     def __init__(self):
         self.configfilepath = "timo.conf"
         self.log_file_path = "timo.log"
-        if os.getuid() == 0:
+        if hasattr(os, "getuid") and os.getuid() == 0:
             self.configfilepath = "/etc/timo/timo.conf"
             self.log_file_path = "/var/log/timo/timo.log"
         self.config = configparser.ConfigParser()

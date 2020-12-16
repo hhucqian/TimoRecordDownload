@@ -9,7 +9,7 @@ class RecordItem:
             self.start_timestamp).strftime("%Y%m%d")
 
     def __str__(self):
-        return "\t".join([f"rid={self.rid}",
+        return "    ".join([f"rid={self.rid}",
                           f"start_timestamp={self.start_timestamp}",
                           f"time_str={self.time_str}"])
 
