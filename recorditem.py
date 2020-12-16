@@ -10,8 +10,8 @@ class RecordItem:
 
     def __str__(self):
         return "    ".join([f"rid={self.rid}",
-                          f"start_timestamp={self.start_timestamp}",
-                          f"time_str={self.time_str}"])
+                            f"start_timestamp={self.start_timestamp}",
+                            f"time_str={self.time_str}"])
 
 
 if __name__ == "__main__":
