@@ -27,20 +27,13 @@ class TimoConfig:
 
         self._logger = logging.getLogger("TimoRecordDownload")
         self._logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
-        handler = logging.FileHandler(self.log_file_path)
+        handler = logging.FileHandler(self.log_file_path, encoding="utf-8")
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
-
-    def __str__(self):
-        return "\t".join([f"record_list_url={self.record_list_url}",
-                          f"flv_list_url={self.flv_list_url}",
-                          f"local_library={self.local_library}",
-                          f"header_count={self.header_count}"])
 
     @property
     def logger(self):
