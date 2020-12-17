@@ -115,7 +115,6 @@ class TimoRecordDownload:
             if self.db.isDownloaded(item.rid):
                 self.logger.info(f"skip one record rid={item.rid} title={item.title}")
                 continue
-            self.db.markDownload(item.rid)
             flv_items = self.get_flv_list(item.rid)
             self.logger.info("get %d flv items", len(flv_items))
             save_dir = self.create_save_dir(item)
@@ -123,4 +122,5 @@ class TimoRecordDownload:
                 f.write(item.json_str)
             self.logger.info("start to download flv files")
             self.download_flv_items(flv_items, save_dir)
+            self.db.markDownload(item.rid)
         self.logger.info("DONE!")
