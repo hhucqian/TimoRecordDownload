@@ -22,8 +22,3 @@ class TimoRecordDB:
         self.conn.execute(
             "insert into record_download(rid) values (?)", (rid,))
         self.conn.commit()
-
-
-if __name__ == "__main__":
-    db = TimoRecordDB("/mnt/nas/timo/data.db")
-    print(db.isDownloaded("abc"))

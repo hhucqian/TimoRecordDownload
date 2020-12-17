@@ -5,99 +5,122 @@ import shutil
 import platform
 import urllib.request
 import sqlite3
+import datetime
 
-from flvitem import FLVItem
-from recorditem import RecordItem
 from timoconfig import TimoConfig
 from timorecorddb import TimoRecordDB
+
+
+class RecordItem:
+    def __init__(self, json_item):
+        self.origin_json = json_item
+        self.rid = json_item["rid"]
+        self.title = json_item["title"]
+        self.start_timestamp = json_item["start_timestamp"]
+        self.time_str = datetime.datetime.fromtimestamp(self.start_timestamp).strftime("%Y%m%d")
+
+    @property
+    def json_str(self):
+        return json.dumps(self.origin_json, ensure_ascii=False, indent=2)
+
+    def __str__(self):
+        return "  ".join([f"rid={self.rid}", f"start_timestamp={self.start_timestamp}", f"time_str={self.time_str}"])
+
+class FLVItem:
+    def __init__(self, idx: int, url: str):
+        self.idx = idx
+        self.url = url
+
+    def __str__(self):
+        return "  ".join([f"idx={self.idx}", f"url={self.url}"])
 
 
 class TimoRecordDownload:
     def __init__(self):
         self.cfg = TimoConfig()
         self.logger = self.cfg.logger
+        self.init_library_path()
         self.db = TimoRecordDB(os.path.join(self.cfg.local_library, "data.db"))
 
-    def get_request_from_url(self, url: str) -> urllib.request.Request:
+    def init_library_path(self):
+        if not os.path.exists(self.cfg.local_library):
+            os.makedirs(self.cfg.local_library)
+            self.logger.info("create folders %s", self.cfg.local_library)
+            if hasattr(os, "chown"): 
+                os.chown(self.cfg.local_library, self.cfg.uid, self.cfg.gid)
+
+    def get_request_from_url(self, url):
         req = urllib.request.Request(url)
         for k in self.cfg.headers:
             req.add_header(k, self.cfg.headers[k])
         return req
 
-    def run(self):
-        self.logger.info("get info from %s", self.cfg.record_list_url)
-        request = self.get_request_from_url(self.cfg.record_list_url)
-        content_raw = ""
+    def get_content_str_from_request(self, request):
+        content = ""
         with urllib.request.urlopen(request) as f:
-            content = json.loads(f.read().decode('utf-8'))
-        if "data" in content and "count" in content["data"] and content["data"]["count"] > 0:
-            for content in content["data"]["list"]:
-                content_raw = json.dumps(content, indent=2, ensure_ascii=False)
-                recordItem = RecordItem(
-                    content["rid"], content["start_timestamp"])
-                self.logger.info("get record item %s", recordItem)
+            content = f.read().decode('utf-8')
+        return content
 
-                if self.db.isDownloaded(recordItem.rid):
-                    self.logger.info("skip one record")
-                    continue
+    def get_record_list(self):
+        res = []
+        request = self.get_request_from_url(self.cfg.record_list_url)
+        response_str = self.get_content_str_from_request(request)
+        response_json = json.loads(response_str)
+        if "data" in response_json and "count" in response_json["data"] and response_json["data"]["count"] > 0:
+            for content in response_json["data"]["list"]:
+                recordItem = RecordItem(content)
+                res.append(recordItem)
+        return res
 
-                self.db.markDownload(recordItem.rid)
+    def get_flv_list(self, rid):
+        res = []
+        flv_list_url = self.cfg.flv_list_url.replace("++++", rid)
+        request = self.get_request_from_url(flv_list_url)
+        response_str = self.get_content_str_from_request(request)
+        response_json = json.loads(response_str)
+        if "data" in response_json and "list" in response_json["data"]:
+            for index in range(len(response_json["data"]["list"])):
+                res.append(FLVItem(index + 1, response_json["data"]["list"][index]["url"]))
+        return res
 
-                flv_list_url = self.cfg.flv_list_url.replace(
-                    "++++", recordItem.rid)
+    def create_save_dir(self, item):
+        save_dir_index = 1
+        save_dir = os.path.join(self.cfg.local_library, item.time_str)
+        while os.path.exists(save_dir):
+                save_dir = os.path.join(self.cfg.local_library, item.time_str + "_" + str(save_dir_index))
+                save_dir_index += 1
+        self.logger.info("create folder %s", save_dir)
+        os.makedirs(save_dir)
+        if hasattr(os, "chown"):
+            os.chown(save_dir, self.cfg.uid, self.cfg.gid)
+        return save_dir
 
-                self.logger.info("get info from %s", flv_list_url)
-                request = self.get_request_from_url(flv_list_url)
-                with urllib.request.urlopen(request) as f:
-                    content = f.read().decode('utf-8')
-                content = json.loads(content)
-                flv_items = []
-                if "data" in content and "list" in content["data"]:
-                    for index in range(len(content["data"]["list"])):
-                        flv_items.append(
-                            FLVItem(index + 1, content["data"]["list"][index]["url"]))
-                else:
-                    self.logger.warn("get flv list fail")
-                    return
-                self.logger.info("get %d flv items", len(flv_items))
+    def download_flv_items(self, flv_items, save_dir):
+        for item in flv_items:
+            local_flv_path = os.path.join(save_dir, str(item.idx) + ".flv")
+            self.logger.info("start to get #%d flv %s", item.idx, local_flv_path)
+            request = self.get_request_from_url(item.url)
+            with urllib.request.urlopen(request) as ffrom, open(local_flv_path, mode="bw") as fto:
+                chunk = ffrom.read(16*1024)
+                while chunk:
+                    fto.write(chunk)
+                    chunk = ffrom.read(16*1024)
+            if hasattr(os, "chown"):
+                os.chown(local_flv_path, self.cfg.uid, self.cfg.gid)
 
-                if not os.path.exists(self.cfg.local_library):
-                    os.makedirs(self.cfg.local_library)
-                    self.logger.info("create folders %s",
-                                     self.cfg.local_library)
-                    if hasattr(os, "chown"):
-                        os.chown(self.cfg.local_library,
-                                 self.cfg.uid, self.cfg.gid)
-
-                save_dir = os.path.join(
-                    self.cfg.local_library, recordItem.time_str)
-                dir_index = 1
-                while os.path.exists(save_dir):
-                    save_dir = os.path.join(
-                        self.cfg.local_library, recordItem.time_str + "_" + str(dir_index))
-                    dir_index += 1
-                self.logger.info("create folders %s", save_dir)
-                os.makedirs(save_dir)
-                if hasattr(os, "chown"):
-                    os.chown(save_dir, self.cfg.uid, self.cfg.gid)
-
-                with open(os.path.join(save_dir, "info.json"), "wt", encoding="utf-8") as f:
-                    f.write(content_raw)
-
-                for item in flv_items:
-                    local_flv_path = os.path.join(
-                        save_dir, str(item.idx) + ".flv")
-                    self.logger.info("start to get #%d flv %s",
-                                     item.idx, local_flv_path)
-                    request = self.get_request_from_url(item.url)
-                    with urllib.request.urlopen(request) as ffrom, open(local_flv_path, mode="bw") as fto:
-                        chunk = ffrom.read(16*1024)
-                        while chunk:
-                            fto.write(chunk)
-                            chunk = ffrom.read(16*1024)
-                    if hasattr(os, "chown"):
-                        os.chown(local_flv_path, self.cfg.uid, self.cfg.gid)
-
-                self.logger.info("DONE!")
-        else:
-            self.logger.warn("get record item fail")
+    def run(self):
+        record_items = self.get_record_list()
+        self.logger.info("get %d record items", len(record_items))
+        for item in record_items:
+            if self.db.isDownloaded(item.rid):
+                self.logger.info(f"skip one record rid={item.rid} title={item.title}")
+                continue
+            self.db.markDownload(item.rid)
+            flv_items = self.get_flv_list(item.rid)
+            self.logger.info("get %d flv items", len(flv_items))
+            save_dir = self.create_save_dir(item)
+            with open(os.path.join(save_dir, "info.json"), "wt", encoding="utf-8") as f:
+                f.write(item.json_str)
+            self.logger.info("start to download flv files")
+            self.download_flv_items(flv_items, save_dir)
+        self.logger.info("DONE!")
