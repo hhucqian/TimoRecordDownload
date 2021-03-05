@@ -5,11 +5,8 @@ import os
 
 class TimoConfig:
     def __init__(self):
-        self.configfilepath = "timo.conf"
-        self.log_file_path = "timo.log"
-        if hasattr(os, "getuid") and os.getuid() == 0:
-            self.configfilepath = "/etc/timo/timo.conf"
-            self.log_file_path = "/var/log/timo/timo.log"
+        self.configfilepath = "/etc/timo/timo.conf"
+        self.log_file_path = "/var/log/timo/timo.log"
         self.config = configparser.ConfigParser()
         self.config.read(self.configfilepath)
         self.record_list_url = self.config.get("bilibili", "record_list_url")
@@ -22,8 +19,6 @@ class TimoConfig:
             self.headers[kv[0]] = kv[1].strip()
 
         self.local_library = self.config.get("local", "library")
-        self.uid = self.config.getint("local", "uid")
-        self.gid = self.config.getint("local", "gid")
 
         self._logger = logging.getLogger("TimoRecordDownload")
         self._logger.setLevel(logging.DEBUG)

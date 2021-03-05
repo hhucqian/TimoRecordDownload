@@ -46,8 +46,6 @@ class TimoRecordDownload:
         if not os.path.exists(self.cfg.local_library):
             os.makedirs(self.cfg.local_library)
             self.logger.info("create folders %s", self.cfg.local_library)
-            if hasattr(os, "chown"): 
-                os.chown(self.cfg.local_library, self.cfg.uid, self.cfg.gid)
 
     def get_request_from_url(self, url):
         req = urllib.request.Request(url)
@@ -91,8 +89,6 @@ class TimoRecordDownload:
                 save_dir_index += 1
         self.logger.info("create folder %s", save_dir)
         os.makedirs(save_dir)
-        if hasattr(os, "chown"):
-            os.chown(save_dir, self.cfg.uid, self.cfg.gid)
         return save_dir
 
     def download_flv_items(self, flv_items, save_dir):
@@ -105,8 +101,6 @@ class TimoRecordDownload:
                 while chunk:
                     fto.write(chunk)
                     chunk = ffrom.read(16*1024)
-            if hasattr(os, "chown"):
-                os.chown(local_flv_path, self.cfg.uid, self.cfg.gid)
 
     def run(self):
         record_items = self.get_record_list()
